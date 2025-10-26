@@ -78,8 +78,8 @@ RUN npm install -g webtorrent-cli
 # 设置工作目录
 WORKDIR /downloads
 
-# 设置入口点，保持容器运行
-ENTRYPOINT ["webtorrent"]
+# 不设置 ENTRYPOINT，允许灵活使用 bash 执行复杂命令
+# 容器启动时可以直接运行 bash -c "..." 或其他命令
 EOF
 
 # 创建 .dockerignore
@@ -661,8 +661,8 @@ RUN npm install -g webtorrent-cli
 # 设置工作目录
 WORKDIR /downloads
 
-# 设置入口点，保持容器运行
-ENTRYPOINT ["webtorrent"]
+# 不设置 ENTRYPOINT，允许灵活使用 bash 执行复杂命令
+# 容器启动时可以直接运行 bash -c "..." 或其他命令
 EOF
 
 cat > ${BUILD_DIR}/.dockerignore << 'EOF'
