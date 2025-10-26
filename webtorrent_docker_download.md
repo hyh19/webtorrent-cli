@@ -11,7 +11,98 @@
 
 ## 实施步骤
 
-### 1. 准备宿主机目录
+### 1. 构建 WebTorrent 镜像
+
+首先需要构建预装 webtorrent-cli 的 Docker 镜像。在项目目录中执行以下步骤：
+
+**步骤 1：创建 Dockerfile**
+
+```bash
+cat > Dockerfile << 'EOF'
+FROM node:lts
+
+# 全局安装 webtorrent-cli
+RUN npm install -g webtorrent-cli
+
+# 设置工作目录
+WORKDIR /downloads
+
+# 设置入口点，保持容器运行
+ENTRYPOINT ["webtorrent"]
+EOF
+```
+
+**步骤 2：创建 .dockerignore**
+
+```bash
+cat > .dockerignore << 'EOF'
+node_modules
+npm-debug.log
+.git
+.gitignore
+README.md
+*.md
+.vscode
+.idea
+*.log
+.DS_Store
+EOF
+```
+
+**步骤 3：创建镜像构建脚本**
+
+```bash
+cat > build-image.sh << 'EOF'
+#!/bin/bash
+
+# WebTorrent CLI 镜像构建脚本
+
+set -e
+
+IMAGE_NAME="webtorrent-cli"
+IMAGE_TAG="latest"
+FULL_IMAGE_NAME="${IMAGE_NAME}:${IMAGE_TAG}"
+
+echo "开始构建 ${FULL_IMAGE_NAME} 镜像..."
+
+# 构建镜像
+docker build -t "${FULL_IMAGE_NAME}" .
+
+echo ""
+echo "镜像构建完成！"
+echo ""
+echo "镜像信息:"
+docker images "${IMAGE_NAME}"
+
+echo ""
+echo "使用方法:"
+echo "  启动下载任务:"
+echo "  docker run -d --name webtorrent-task-1 --restart unless-stopped --network host \\"
+echo "    -v ~/webtorrent/downloads:/downloads -v ~/webtorrent/logs:/logs \\"
+echo "    ${FULL_IMAGE_NAME} 'magnet:?xt=urn:btih:YOUR_LINK' > /logs/task-1.log 2>&1"
+EOF
+
+chmod +x build-image.sh
+```
+
+**步骤 4：构建镜像**
+
+```bash
+# 使用构建脚本构建镜像
+./build-image.sh
+
+# 或者直接使用 docker build 命令
+docker build -t webtorrent-cli:latest .
+```
+
+**镜像构建说明：**
+
+- 基于 `node:lts` 官方镜像
+- 预装 `webtorrent-cli`（避免每次启动时安装）
+- 工作目录设置为 `/downloads`
+- 启动速度更快，资源利用更高效
+
+### 2. 准备宿主机目录
 
 在宿主机上创建用于存储下载文件和日志的目录：
 
@@ -20,7 +111,7 @@ mkdir -p ~/webtorrent/downloads
 mkdir -p ~/webtorrent/logs
 ```
 
-### 2. 启动下载任务
+### 3. 启动下载任务
 
 使用以下命令模板启动第一个下载任务：
 
@@ -31,9 +122,8 @@ docker run -d \
   --network host \
   -v ~/webtorrent/downloads:/downloads \
   -v ~/webtorrent/logs:/logs \
-  node:lts \
-  bash -c "npm install -g webtorrent-cli && \
-           cd /downloads && \
+  webtorrent-cli:latest \
+  bash -c "cd /downloads && \
            webtorrent --on-done 'kill 1' 'magnet:?xt=urn:btih:a733c037a81e6b14c4c20abdb963f2718b0aa1b7&dn=[javdb.com]JUR-572.mp4' \
            > /logs/task-1.log 2>&1"
 ```
@@ -46,11 +136,11 @@ docker run -d \
 - `--network host`: 使用宿主机网络，确保 BT 流量正常连接
 - `-v ~/webtorrent/downloads:/downloads`: 挂载下载目录
 - `-v ~/webtorrent/logs:/logs`: 挂载日志目录
-- `node:lts`: 使用基于 Debian 的 Node.js LTS 镜像（避免 Alpine 的兼容性问题）
+- `webtorrent-cli:latest`: 使用预装 webtorrent-cli 的自定义镜像（启动速度更快）
 - `bash -c "..."`: 执行一系列命令
 - `> /logs/task-1.log 2>&1`: 将输出重定向到独立的日志文件，建议使用 `task-编号.log` 命名
 
-### 3. 添加新的下载任务
+### 4. 添加新的下载任务
 
 当需要下载新文件时，只需要修改容器名称、磁力链接和日志文件名，再次执行命令即可：
 
@@ -63,9 +153,8 @@ docker run -d \
   --network host \
   -v ~/webtorrent/downloads:/downloads \
   -v ~/webtorrent/logs:/logs \
-  node:lts \
-  bash -c "npm install -g webtorrent-cli && \
-           cd /downloads && \
+  webtorrent-cli:latest \
+  bash -c "cd /downloads && \
            webtorrent --on-done 'kill 1' 'magnet:?xt=urn:btih:另一个磁力链接' \
            > /logs/task-2.log 2>&1"
 ```
@@ -84,9 +173,8 @@ add_download() {
     --network host \
     -v ~/webtorrent/downloads:/downloads \
     -v ~/webtorrent/logs:/logs \
-    node:lts \
-    bash -c "npm install -g webtorrent-cli && \
-                 cd /downloads && \
+    webtorrent-cli:latest \
+    bash -c "cd /downloads && \
                  webtorrent --on-done 'kill 1' '${magnet_link}' \
                  > /logs/${task_name}.log 2>&1"
   
@@ -97,7 +185,7 @@ add_download() {
 # add_download "movie-1" "magnet:?xt=urn:btih:..."
 ```
 
-### 4. 管理下载任务
+### 5. 管理下载任务
 
 **查看所有下载任务：**
 
@@ -154,10 +242,10 @@ docker ps -q --filter "name=webtorrent-task" | xargs -r docker stop
 docker ps -aq --filter "name=webtorrent-task" | xargs -r docker restart
 
 # 删除所有已停止的任务
-docker ps -aq --filter "name=webtorrent-task" --filter "status=exited" | xargs -r docker rm
+  docker ps -aq --filter "name=webtorrent-task" --filter "status=exited" | xargs -r docker rm
 ```
 
-### 5. 下载完成后
+### 6. 下载完成后
 
 所有下载完成的文件将保存在 `~/webtorrent/downloads` 目录中，每个任务的日志保存在对应的 `~/webtorrent/logs/task-N.log` 文件中。
 
@@ -216,9 +304,8 @@ while IFS= read -r magnet_link; do
     --network host \
     -v ~/webtorrent/downloads:/downloads \
     -v ~/webtorrent/logs:/logs \
-    node:lts \
-    bash -c "npm install -g webtorrent-cli && \
-             cd /downloads && \
+    webtorrent-cli:latest \
+    bash -c "cd /downloads && \
              webtorrent --on-done 'kill 1' '${magnet_link}' \
              > /logs/task-${task_num}.log 2>&1"
   

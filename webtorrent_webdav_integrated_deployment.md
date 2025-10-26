@@ -60,7 +60,89 @@ mkdir -p ~/webtorrent-webdav/{downloads,logs,config}
 cd ~/webtorrent-webdav
 ```
 
-### 2. 配置 WebDAV 服务
+### 2. 构建 WebTorrent 镜像
+
+构建预装 webtorrent-cli 的 Docker 镜像。创建一个临时目录并执行以下步骤：
+
+```bash
+# 创建临时工作目录
+mkdir -p /tmp/webtorrent-build && cd /tmp/webtorrent-build
+
+# 创建 Dockerfile
+cat > Dockerfile << 'EOF'
+FROM node:lts
+
+# 全局安装 webtorrent-cli
+RUN npm install -g webtorrent-cli
+
+# 设置工作目录
+WORKDIR /downloads
+
+# 设置入口点，保持容器运行
+ENTRYPOINT ["webtorrent"]
+EOF
+
+# 创建 .dockerignore
+cat > .dockerignore << 'EOF'
+node_modules
+npm-debug.log
+.git
+.gitignore
+README.md
+*.md
+.vscode
+.idea
+*.log
+.DS_Store
+EOF
+
+# 创建镜像构建脚本
+cat > build-image.sh << 'EOF'
+#!/bin/bash
+
+# WebTorrent CLI 镜像构建脚本
+
+set -e
+
+IMAGE_NAME="webtorrent-cli"
+IMAGE_TAG="latest"
+FULL_IMAGE_NAME="${IMAGE_NAME}:${IMAGE_TAG}"
+
+echo "开始构建 ${FULL_IMAGE_NAME} 镜像..."
+
+# 构建镜像
+docker build -t "${FULL_IMAGE_NAME}" .
+
+echo ""
+echo "镜像构建完成！"
+echo ""
+echo "镜像信息:"
+docker images "${IMAGE_NAME}"
+
+echo ""
+echo "使用方法:"
+echo "  启动下载任务:"
+echo "  docker run -d --name webtorrent-task-1 --restart unless-stopped --network host \\"
+echo "    -v ~/webtorrent/downloads:/downloads -v ~/webtorrent/logs:/logs \\"
+echo "    ${FULL_IMAGE_NAME} 'magnet:?xt=urn:btih:YOUR_LINK' > /logs/task-1.log 2>&1"
+EOF
+
+chmod +x build-image.sh
+
+# 构建镜像
+./build-image.sh
+
+# 构建完成后可以删除临时目录（可选）
+# cd ~ && rm -rf /tmp/webtorrent-build
+```
+
+**镜像说明：**
+
+- 基于 `node:lts` 官方镜像
+- 预装 `webtorrent-cli`（避免每次启动时安装）
+- 启动速度更快，资源利用更高效
+
+### 3. 配置 WebDAV 服务
 
 创建 WebDAV 配置文件：
 
@@ -98,7 +180,7 @@ EOF
 cat ~/webtorrent-webdav/config/config.yml
 ```
 
-### 3. 启动 WebDAV 容器
+### 4. 启动 WebDAV 容器
 
 拉取镜像：
 
@@ -137,13 +219,7 @@ docker ps | grep webdav
 docker logs webdav
 ```
 
-### 4. 启动 WebTorrent 下载任务
-
-拉取 Node.js 镜像：
-
-```bash
-docker pull node:lts
-```
+### 5. 启动 WebTorrent 下载任务
 
 启动第一个下载任务：
 
@@ -154,9 +230,8 @@ docker run -d \
   --network host \
   -v ~/webtorrent-webdav/downloads:/downloads \
   -v ~/webtorrent-webdav/logs:/logs \
-  node:lts \
-  bash -c "npm install -g webtorrent-cli && \
-           cd /downloads && \
+  webtorrent-cli:latest \
+  bash -c "cd /downloads && \
            webtorrent --on-done 'kill 1' 'magnet:?xt=urn:btih:YOUR_MAGNET_LINK_HERE' \
            > /logs/task-1.log 2>&1"
 ```
@@ -214,12 +289,12 @@ ls -lh ~/webtorrent-webdav/downloads/
 # 服务器端：启动多个下载任务
 docker run -d --name webtorrent-task-2 --restart unless-stopped --network host \
   -v ~/webtorrent-webdav/downloads:/downloads -v ~/webtorrent-webdav/logs:/logs \
-  node:lts bash -c "npm install -g webtorrent-cli && cd /downloads && \
+  webtorrent-cli:latest bash -c "cd /downloads && \
   webtorrent --on-done 'kill 1' 'magnet:?xt=urn:btih:LINK_2' > /logs/task-2.log 2>&1"
 
 docker run -d --name webtorrent-task-3 --restart unless-stopped --network host \
   -v ~/webtorrent-webdav/downloads:/downloads -v ~/webtorrent-webdav/logs:/logs \
-  node:lts bash -c "npm install -g webtorrent-cli && cd /downloads && \
+  webtorrent-cli:latest bash -c "cd /downloads && \
   webtorrent --on-done 'kill 1' 'magnet:?xt=urn:btih:LINK_3' > /logs/task-3.log 2>&1"
 
 # 客户端：通过 WebDAV 访问 http://服务器IP:6065
@@ -250,9 +325,8 @@ add_download() {
     --network host \
     -v ~/webtorrent-webdav/downloads:/downloads \
     -v ~/webtorrent-webdav/logs:/logs \
-    node:lts \
-    bash -c "npm install -g webtorrent-cli && \
-             cd /downloads && \
+    webtorrent-cli:latest \
+    bash -c "cd /downloads && \
              webtorrent --on-done 'kill 1' '${magnet_link}' \
              > /logs/${task_name}.log 2>&1"
   
@@ -296,9 +370,8 @@ docker run -d \
   --network host \
   -v ~/webtorrent-webdav/downloads:/downloads \
   -v ~/webtorrent-webdav/logs:/logs \
-  node:lts \
-  bash -c "npm install -g webtorrent-cli && \
-           cd /downloads && \
+  webtorrent-cli:latest \
+  bash -c "cd /downloads && \
            webtorrent --on-done 'kill 1' 'magnet:?xt=urn:btih:NEW_LINK' \
            > /logs/task-N.log 2>&1"
 ```
@@ -534,8 +607,8 @@ docker run -d \
   --network host \
   -v ~/webtorrent-webdav/downloads:/downloads \
   -v ~/webtorrent-webdav/logs:/logs \
-  node:lts \
-  bash -c "npm install -g webtorrent-cli && cd /downloads && \
+  webtorrent-cli:latest \
+  bash -c "cd /downloads && \
   webtorrent --on-done 'kill 1' 'magnet:?xt=urn:btih:LINK' > /logs/task-1.log 2>&1"
 ```
 
@@ -574,7 +647,40 @@ EOF
 # 拉取镜像
 echo "拉取 Docker 镜像..."
 docker pull ghcr.io/hacdias/webdav:latest
-docker pull node:lts
+
+# 构建 WebTorrent 镜像
+echo "构建 WebTorrent 镜像..."
+BUILD_DIR="/tmp/webtorrent-build"
+mkdir -p ${BUILD_DIR}
+
+cat > ${BUILD_DIR}/Dockerfile << 'EOF'
+FROM node:lts
+
+# 全局安装 webtorrent-cli
+RUN npm install -g webtorrent-cli
+
+# 设置工作目录
+WORKDIR /downloads
+
+# 设置入口点，保持容器运行
+ENTRYPOINT ["webtorrent"]
+EOF
+
+cat > ${BUILD_DIR}/.dockerignore << 'EOF'
+node_modules
+npm-debug.log
+.git
+.gitignore
+README.md
+*.md
+.vscode
+.idea
+*.log
+.DS_Store
+EOF
+
+docker build -t webtorrent-cli:latest ${BUILD_DIR}
+rm -rf ${BUILD_DIR}
 
 # 启动 WebDAV 服务
 echo "启动 WebDAV 服务..."
@@ -602,7 +708,7 @@ echo ""
 echo "请使用以下命令启动 WebTorrent 下载任务："
 echo "docker run -d --name webtorrent-task-1 --restart unless-stopped --network host \\"
 echo "  -v ~/webtorrent-webdav/downloads:/downloads -v ~/webtorrent-webdav/logs:/logs \\"
-echo "  node:lts bash -c \"npm install -g webtorrent-cli && cd /downloads && \\"
+echo "  webtorrent-cli:latest bash -c \"cd /downloads && \\"
 echo "  webtorrent --on-done 'kill 1' 'YOUR_MAGNET_LINK' > /logs/task-1.log 2>&1\""
 ```
 
