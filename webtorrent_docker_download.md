@@ -1,4 +1,3 @@
-<!-- https://github.com/webtorrent/webtorrent-cli/tree/1334ba126c62d8d6ca0fb9745f53a1e2e5679037 -->
 # Docker WebTorrent 多任务下载方案
 
 ## 方案概述
