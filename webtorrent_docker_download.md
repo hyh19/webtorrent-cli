@@ -45,7 +45,6 @@ README.md
 .vscode
 .idea
 *.log
-.DS_Store
 EOF
 ```
 

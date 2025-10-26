@@ -93,7 +93,6 @@ README.md
 .vscode
 .idea
 *.log
-.DS_Store
 EOF
 
 # 创建镜像构建脚本
@@ -254,20 +253,15 @@ docker run -d \
 - 用户名: `admin`
 - 密码: `admin`
 
-**macOS Finder 连接：**
+**WebDAV 客户端连接：**
 
-1. 打开 Finder
-2. 按 `Cmd + K`
-3. 输入: `http://localhost:6065`
+大多数现代文件管理器和应用都支持 WebDAV 协议，可以通过以下方式连接：
+
+1. 打开你的 WebDAV 客户端（如 Nautilus、Dolphin、Thunar 等文件管理器，或专门的 WebDAV 客户端）
+2. 选择"连接到服务器"或"添加服务器"
+3. 输入服务器地址: `http://localhost:6065`
 4. 输入用户名和密码
-5. 连接后可实时查看 WebTorrent 下载的文件
-
-**Windows 资源管理器连接：**
-
-1. 右键"此电脑" → "映射网络驱动器"
-2. 输入: `http://localhost:6065`
-3. 输入用户名和密码
-4. 映射后可像本地磁盘一样访问
+5. 连接成功后即可实时查看和访问 WebTorrent 下载的文件
 
 **查看下载进度：**
 
@@ -675,7 +669,6 @@ README.md
 .vscode
 .idea
 *.log
-.DS_Store
 EOF
 
 docker build -t webtorrent-cli:latest ${BUILD_DIR}
