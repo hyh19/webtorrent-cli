@@ -232,7 +232,7 @@ docker run -d \
   -v ~/webtorrent-webdav/logs:/logs \
   webtorrent-cli:latest \
   bash -c "cd /downloads && \
-           webtorrent --on-done 'kill 1' 'magnet:?xt=urn:btih:YOUR_MAGNET_LINK_HERE' \
+           webtorrent 'magnet:?xt=urn:btih:YOUR_MAGNET_LINK_HERE' \
            > /logs/task-1.log 2>&1"
 ```
 
@@ -290,12 +290,12 @@ ls -lh ~/webtorrent-webdav/downloads/
 docker run -d --name webtorrent-task-2 --restart unless-stopped --network host \
   -v ~/webtorrent-webdav/downloads:/downloads -v ~/webtorrent-webdav/logs:/logs \
   webtorrent-cli:latest bash -c "cd /downloads && \
-  webtorrent --on-done 'kill 1' 'magnet:?xt=urn:btih:LINK_2' > /logs/task-2.log 2>&1"
+  webtorrent 'magnet:?xt=urn:btih:LINK_2' > /logs/task-2.log 2>&1"
 
 docker run -d --name webtorrent-task-3 --restart unless-stopped --network host \
   -v ~/webtorrent-webdav/downloads:/downloads -v ~/webtorrent-webdav/logs:/logs \
   webtorrent-cli:latest bash -c "cd /downloads && \
-  webtorrent --on-done 'kill 1' 'magnet:?xt=urn:btih:LINK_3' > /logs/task-3.log 2>&1"
+  webtorrent 'magnet:?xt=urn:btih:LINK_3' > /logs/task-3.log 2>&1"
 
 # 客户端：通过 WebDAV 访问 http://服务器IP:6065
 ```
@@ -327,7 +327,7 @@ add_download() {
     -v ~/webtorrent-webdav/logs:/logs \
     webtorrent-cli:latest \
     bash -c "cd /downloads && \
-             webtorrent --on-done 'kill 1' '${magnet_link}' \
+             webtorrent '${magnet_link}' \
              > /logs/${task_name}.log 2>&1"
   
   echo "任务 ${task_name} 已启动，可通过 WebDAV 访问下载目录"
@@ -357,8 +357,7 @@ docker ps -a --filter "name=webtorrent-task" --filter "status=exited"
 **容器生命周期说明：**
 
 - 运行中：下载进行中的容器状态为 `Up`
-- 已完成：下载完成后，容器通过 `--on-done 'kill 1'` 参数自动退出，状态变为 `Exited (0)`
-- 正常退出（exit code 0）不会触发 `--restart unless-stopped` 的重启策略
+- 已完成：下载完成后，容器会继续运行
 - 只有异常退出（非 0 状态码）时容器才会自动重启
 
 **添加新的下载任务：**
@@ -372,7 +371,7 @@ docker run -d \
   -v ~/webtorrent-webdav/logs:/logs \
   webtorrent-cli:latest \
   bash -c "cd /downloads && \
-           webtorrent --on-done 'kill 1' 'magnet:?xt=urn:btih:NEW_LINK' \
+           webtorrent 'magnet:?xt=urn:btih:NEW_LINK' \
            > /logs/task-N.log 2>&1"
 ```
 
@@ -609,7 +608,7 @@ docker run -d \
   -v ~/webtorrent-webdav/logs:/logs \
   webtorrent-cli:latest \
   bash -c "cd /downloads && \
-  webtorrent --on-done 'kill 1' 'magnet:?xt=urn:btih:LINK' > /logs/task-1.log 2>&1"
+  webtorrent 'magnet:?xt=urn:btih:LINK' > /logs/task-1.log 2>&1"
 ```
 
 ## 完整部署脚本
@@ -709,7 +708,7 @@ echo "请使用以下命令启动 WebTorrent 下载任务："
 echo "docker run -d --name webtorrent-task-1 --restart unless-stopped --network host \\"
 echo "  -v ~/webtorrent-webdav/downloads:/downloads -v ~/webtorrent-webdav/logs:/logs \\"
 echo "  webtorrent-cli:latest bash -c \"cd /downloads && \\"
-echo "  webtorrent --on-done 'kill 1' 'YOUR_MAGNET_LINK' > /logs/task-1.log 2>&1\""
+echo "  webtorrent 'YOUR_MAGNET_LINK' > /logs/task-1.log 2>&1\""
 ```
 
 执行脚本：
