@@ -76,7 +76,7 @@ docker images "${IMAGE_NAME}"
 echo ""
 echo "使用方法:"
 echo "  启动下载任务:"
-echo "  docker run -d --name webtorrent-task-1 --restart unless-stopped --network host \\"
+echo "  docker run -d --name webtorrent-task-1 --restart on-failure --network host \\"
 echo "    -v ~/webtorrent/downloads:/downloads -v ~/webtorrent/logs:/logs \\"
 echo "    ${FULL_IMAGE_NAME} 'magnet:?xt=urn:btih:YOUR_LINK' > /logs/task-1.log 2>&1"
 EOF
@@ -117,7 +117,7 @@ mkdir -p ~/webtorrent/logs
 ```bash
 docker run -d \
   --name webtorrent-task-1 \
-  --restart unless-stopped \
+  --restart on-failure \
   --network host \
   -v ~/webtorrent/downloads:/downloads \
   -v ~/webtorrent/logs:/logs \
@@ -131,7 +131,7 @@ docker run -d \
 
 - `-d`: 后台运行容器
 - `--name webtorrent-task-1`: 容器名称，建议使用编号便于管理(如 `task-1`, `task-2` 等)
-- `--restart unless-stopped`: 容器异常退出时自动重启，除非手动停止
+- `--restart on-failure`: 容器异常退出时自动重启，正常退出时不会重启
 - `--network host`: 使用宿主机网络，确保 BT 流量正常连接
 - `-v ~/webtorrent/downloads:/downloads`: 挂载下载目录
 - `-v ~/webtorrent/logs:/logs`: 挂载日志目录
@@ -148,7 +148,7 @@ docker run -d \
 ```bash
 docker run -d \
   --name webtorrent-task-2 \
-  --restart unless-stopped \
+  --restart on-failure \
   --network host \
   -v ~/webtorrent/downloads:/downloads \
   -v ~/webtorrent/logs:/logs \
@@ -168,7 +168,7 @@ add_download() {
   
   docker run -d \
     --name "webtorrent-${task_name}" \
-    --restart unless-stopped \
+    --restart on-failure \
     --network host \
     -v ~/webtorrent/downloads:/downloads \
     -v ~/webtorrent/logs:/logs \
@@ -295,7 +295,7 @@ task_num=1
 while IFS= read -r magnet_link; do
   docker run -d \
     --name "webtorrent-task-${task_num}" \
-    --restart unless-stopped \
+    --restart on-failure \
     --network host \
     -v ~/webtorrent/downloads:/downloads \
     -v ~/webtorrent/logs:/logs \

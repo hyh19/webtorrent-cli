@@ -121,7 +121,7 @@ docker images "${IMAGE_NAME}"
 echo ""
 echo "使用方法:"
 echo "  启动下载任务:"
-echo "  docker run -d --name webtorrent-task-1 --restart unless-stopped --network host \\"
+echo "  docker run -d --name webtorrent-task-1 --restart on-failure --network host \\"
 echo "    -v ~/webtorrent/downloads:/downloads -v ~/webtorrent/logs:/logs \\"
 echo "    ${FULL_IMAGE_NAME} 'magnet:?xt=urn:btih:YOUR_LINK' > /logs/task-1.log 2>&1"
 EOF
@@ -225,7 +225,7 @@ docker logs webdav
 ```bash
 docker run -d \
   --name webtorrent-task-1 \
-  --restart unless-stopped \
+  --restart on-failure \
   --network host \
   -v ~/webtorrent-webdav/downloads:/downloads \
   -v ~/webtorrent-webdav/logs:/logs \
@@ -238,6 +238,7 @@ docker run -d \
 **参数说明：**
 
 - `--name webtorrent-task-1`：任务容器名称（使用编号便于管理）
+- `--restart on-failure`：容器异常退出时自动重启，正常退出时不会重启
 - `--network host`：使用宿主机网络，确保 BT 流量正常
 - `-v ~/webtorrent-webdav/downloads:/downloads`：挂载共享下载目录（与 WebDAV 同一目录）
 - `-v ~/webtorrent-webdav/logs:/logs`：挂载日志目录
@@ -281,12 +282,12 @@ ls -lh ~/webtorrent-webdav/downloads/
 
 ```bash
 # 服务器端：启动多个下载任务
-docker run -d --name webtorrent-task-2 --restart unless-stopped --network host \
+docker run -d --name webtorrent-task-2 --restart on-failure --network host \
   -v ~/webtorrent-webdav/downloads:/downloads -v ~/webtorrent-webdav/logs:/logs \
   webtorrent-cli:latest bash -c "cd /downloads && \
   webtorrent 'magnet:?xt=urn:btih:LINK_2' > /logs/task-2.log 2>&1"
 
-docker run -d --name webtorrent-task-3 --restart unless-stopped --network host \
+docker run -d --name webtorrent-task-3 --restart on-failure --network host \
   -v ~/webtorrent-webdav/downloads:/downloads -v ~/webtorrent-webdav/logs:/logs \
   webtorrent-cli:latest bash -c "cd /downloads && \
   webtorrent 'magnet:?xt=urn:btih:LINK_3' > /logs/task-3.log 2>&1"
@@ -315,7 +316,7 @@ add_download() {
   
   docker run -d \
     --name "webtorrent-${task_name}" \
-    --restart unless-stopped \
+    --restart on-failure \
     --network host \
     -v ~/webtorrent-webdav/downloads:/downloads \
     -v ~/webtorrent-webdav/logs:/logs \
@@ -359,7 +360,7 @@ docker ps -a --filter "name=webtorrent-task" --filter "status=exited"
 ```bash
 docker run -d \
   --name webtorrent-task-N \
-  --restart unless-stopped \
+  --restart on-failure \
   --network host \
   -v ~/webtorrent-webdav/downloads:/downloads \
   -v ~/webtorrent-webdav/logs:/logs \
@@ -596,7 +597,7 @@ docker run -d \
   --name webtorrent-task-1 \
   --memory="2g" \
   --cpus="2" \
-  --restart unless-stopped \
+  --restart on-failure \
   --network host \
   -v ~/webtorrent-webdav/downloads:/downloads \
   -v ~/webtorrent-webdav/logs:/logs \
@@ -698,7 +699,7 @@ echo "用户名: admin"
 echo "密码: admin"
 echo ""
 echo "请使用以下命令启动 WebTorrent 下载任务："
-echo "docker run -d --name webtorrent-task-1 --restart unless-stopped --network host \\"
+echo "docker run -d --name webtorrent-task-1 --restart on-failure --network host \\"
 echo "  -v ~/webtorrent-webdav/downloads:/downloads -v ~/webtorrent-webdav/logs:/logs \\"
 echo "  webtorrent-cli:latest bash -c \"cd /downloads && \\"
 echo "  webtorrent 'YOUR_MAGNET_LINK' > /logs/task-1.log 2>&1\""
