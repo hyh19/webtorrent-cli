@@ -35,7 +35,7 @@ docker run -d \
   node:lts \
   bash -c "npm install -g webtorrent-cli && \
            cd /downloads && \
-           webtorrent 'magnet:?xt=urn:btih:a733c037a81e6b14c4c20abdb963f2718b0aa1b7&dn=[javdb.com]JUR-572.mp4' \
+           webtorrent --on-done 'kill 1' 'magnet:?xt=urn:btih:a733c037a81e6b14c4c20abdb963f2718b0aa1b7&dn=[javdb.com]JUR-572.mp4' \
            > /logs/task-1.log 2>&1"
 ```
 
@@ -67,7 +67,7 @@ docker run -d \
   node:lts \
   bash -c "npm install -g webtorrent-cli && \
            cd /downloads && \
-           webtorrent 'magnet:?xt=urn:btih:另一个磁力链接' \
+           webtorrent --on-done 'kill 1' 'magnet:?xt=urn:btih:另一个磁力链接' \
            > /logs/task-2.log 2>&1"
 ```
 
@@ -88,7 +88,7 @@ add_download() {
     node:lts \
     bash -c "npm install -g webtorrent-cli && \
                  cd /downloads && \
-                 webtorrent '${magnet_link}' \
+                 webtorrent --on-done 'kill 1' '${magnet_link}' \
                  > /logs/${task_name}.log 2>&1"
   
   echo "任务 ${task_name} 已启动，日志: ~/webtorrent/logs/${task_name}.log"
@@ -162,15 +162,29 @@ docker ps -aq --filter "name=webtorrent-task" --filter "status=exited" | xargs -
 
 所有下载完成的文件将保存在 `~/webtorrent/downloads` 目录中，每个任务的日志保存在对应的 `~/webtorrent/logs/task-N.log` 文件中。
 
-当一个任务下载完成后，对应的容器会自动退出。如果需要清理已完成的容器：
+当一个任务下载完成后，通过 `--on-done 'kill 1'` 参数，对应的容器会自动退出。
+
+**查看已完成的任务：**
 
 ```bash
+# 查看所有已退出的容器
+docker ps -a --filter "name=webtorrent-task" --filter "status=exited"
+
+# 查看退出时间和状态码
+docker ps -a | grep webtorrent-task
+```
+
+**清理已完成的容器：**
+
+```bash
+# 删除所有已完成的容器
 docker ps -aq --filter "name=webtorrent-task" --filter "status=exited" | xargs -r docker rm
 ```
 
 ## 注意事项
 
-- 每个容器会在下载完成后自动退出，但由于设置了 `--restart unless-stopped`，如果下载过程中出现错误，容器会自动重启
+- 每个容器会在下载完成后自动退出：通过 `--on-done 'kill 1'` 参数实现，容器正常退出（exit code 0）时不会触发 `--restart unless-stopped` 的重启策略
+- 只有容器异常退出（非 0 状态码）时才会自动重启
 - 可以随时添加新的下载任务，只需要使用不同的容器名称和日志文件名
 - 日志文件会持续增长，建议定期清理：`> ~/webtorrent/logs/task-N.log`（保留日志但清空内容）
 - 下载同一个磁力链接时，使用不同的容器名称可以创建多个下载实例
@@ -206,7 +220,7 @@ while IFS= read -r magnet_link; do
     node:lts \
     bash -c "npm install -g webtorrent-cli && \
              cd /downloads && \
-             webtorrent '${magnet_link}' \
+             webtorrent --on-done 'kill 1' '${magnet_link}' \
              > /logs/task-${task_num}.log 2>&1"
   
   echo "任务 ${task_num} 已启动"
