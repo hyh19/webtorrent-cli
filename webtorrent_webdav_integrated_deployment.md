@@ -173,6 +173,42 @@ EOF
 - `permissions: CRUD`：完整的创建、读取、更新、删除权限
 - `users`：访问用户列表，**强烈建议修改默认密码**
 
+**匿名访问配置（可选）：**
+
+如需支持匿名只读访问，可使用以下配置：
+
+```bash
+cat > ~/webtorrent-webdav/config/config.yml << 'EOF'
+address: 0.0.0.0
+port: 6065
+directory: /downloads
+permissions: R
+debug: false
+
+log:
+  format: console
+  colors: true
+  outputs:
+    - stderr
+
+users: []
+EOF
+```
+
+配置说明：
+
+- `users: []`：空用户列表，无需认证即可访问
+- `permissions: R`：设置为只读权限，防止文件被修改或删除
+- 匿名访问时无需输入用户名和密码，所有人都可以查看和下载文件
+
+**重要说明：**
+
+- 该配置将使所有人都能无认证访问下载的文件
+- 仅限在可信网络环境（如本地局域网）中使用
+- 如需关闭匿名访问，恢复原有的 `users` 列表配置
+
+**安全提示：** 匿名访问存在严重安全风险，建议仅在完全可信的内网环境中使用。公网环境下请务必使用账号密码认证。
+
 验证配置文件：
 
 ```bash
@@ -250,9 +286,16 @@ docker run -d \
 
 **通过 WebDAV 客户端访问：**
 
+如果使用账号密码认证：
+
 - URL: `http://localhost:6065`
 - 用户名: `admin`
 - 密码: `admin`
+
+如果使用匿名访问：
+
+- URL: `http://localhost:6065`
+- 无需输入用户名和密码（直接连接）
 
 **WebDAV 客户端连接：**
 
@@ -261,7 +304,7 @@ docker run -d \
 1. 打开你的 WebDAV 客户端（如 Nautilus、Dolphin、Thunar 等文件管理器，或专门的 WebDAV 客户端）
 2. 选择"连接到服务器"或"添加服务器"
 3. 输入服务器地址: `http://localhost:6065`
-4. 输入用户名和密码
+4. 如果已配置匿名访问，可直接连接；否则输入用户名和密码
 5. 连接成功后即可实时查看和访问 WebTorrent 下载的文件
 
 **查看下载进度：**
@@ -499,7 +542,20 @@ ls -ld ~/webtorrent-webdav/downloads/
        password: "your_strong_password_here"
    ```
 
-2. **使用加密密码**
+2. **匿名访问安全考虑**
+
+   如果启用了匿名访问（`users: []`），请注意以下安全事项：
+
+   - **仅限可信网络**：匿名访问应在安全的内网或本地环境中使用
+   - **只读权限**：确保全局权限设置为只读（`permissions: R`），防止未授权修改
+   - **避免公网开放**：不要在公网环境下启用匿名访问，否则任何人都可以访问您的文件
+   - **监控访问**：定期查看日志了解访问情况：
+
+     ```bash
+     docker logs webdav
+     ```
+
+3. **使用加密密码**
 
    生成 bcrypt 加密密码：
 
@@ -512,10 +568,10 @@ ls -ld ~/webtorrent-webdav/downloads/
    ```yaml
    users:
      - username: admin
-       password: "{bcrypt}$2y$10$..."
-   ```
+      password: "{bcrypt}$2y$10$..."
+      ```
 
-3. **限制访问范围**
+4. **限制访问范围**
 
    仅本地访问时，修改配置文件：
 
@@ -523,7 +579,7 @@ ls -ld ~/webtorrent-webdav/downloads/
    address: 127.0.0.1
    ```
 
-4. **使用 HTTPS**
+5. **使用 HTTPS**
 
    生产环境建议使用反向代理（如 Nginx）配置 HTTPS。
 
